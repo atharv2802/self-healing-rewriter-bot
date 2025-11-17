@@ -11,16 +11,21 @@ A stateless FastAPI microservice for financial compliance and risk rewriting of 
 
 ## Features
 - **Stateless API**: No database, no persistence
-- **LLM-powered**: Uses Groq for risk assessment and rewriting
-- **Policy-driven**: Customizable compliance policies
-- **Batch & single processing**: (Single endpoint enabled by default)
-- **Audit logging & error handling**
+- **LLM-powered**: Uses Groq for risk assessment, rewriting, and escalation
+- **Policy-driven**: Customizable compliance policies, forbidden phrase detection, and preferred patterns
+- **Batch & single processing**: Supports both single and batch requests (up to 100 per batch)
+- **Partial failure handling**: Batch endpoint returns HTTP 207 Multi-Status for partial failures, HTTP 500 for total failure
+- **Audit logging & error handling**: Structured logs, robust error reporting, and fallback logic for LLM errors
+- **Configurable via .env**: Forbidden keywords, retry settings, and model parameters are environment-driven
+- **Prompt injection safety**: All LLM prompt payloads are JSON-serialized to prevent injection and formatting errors
+- **Offline testability**: Pytest fixture stubs LLM calls for deterministic, credential-free testing
 - **SOC II ready**: Stateless, secure, and auditable
 
 ---
 
 ## API Endpoints
-- `POST /rewrite_reply` — Rewrite or escalate risky agent replies
+- `POST /rewrite_reply` — Rewrite or escalate risky agent replies (single request)
+- `POST /rewrite_batch` — Batch rewrite or escalate (returns HTTP 207 for partial failures)
 - `GET /health` — Health check
 
 ### Example Request
@@ -31,31 +36,29 @@ See `data/test_cases_example.json` for realistic payloads.
 ## Quickstart
 ```sh
 # Clone the repo
-# git clone https://github.com/your-org/self-healing-response-rewriter.git
 cd shr
-
-# Create and activate virtual environment
 python -m venv shrenv
 shrenv\Scripts\activate  # Windows
-# Or: source shrenv/bin/activate  # Linux/Mac
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Set up environment variables
 cp .env.example .env
 # Edit .env with your Groq API key and model name
-
-# Run the service
 uvicorn app.main:app --reload
 ```
 
 ---
 
 ## Testing
+
 Run the test runner to validate compliance logic:
 ```sh
 python post_test_cases.py > results.txt
+```
+
+To view the output on a sample test case, check `results.txt`.
+
+To run the full automated test suite offline:
+```sh
+pytest
 ```
 
 ---
@@ -73,7 +76,9 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Limitations & Roadmap
 - No authentication or persistence
 - No frontend UI
-- Future: granular policies, multi-LLM support, advanced escalation logic
+- No database or stateful storage
+- Future: granular policies, multi-LLM support, advanced escalation logic, Pydantic V2 migration
+
 ---
 
 ## Acknowledgments
