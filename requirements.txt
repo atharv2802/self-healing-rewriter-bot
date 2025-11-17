@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+groq
+httpx
+typing-extensions
+pytest

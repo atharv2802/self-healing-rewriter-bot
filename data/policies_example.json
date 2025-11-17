@@ -1,0 +1,37 @@
+[
+  {
+    "id": "KYC-001",
+    "description": "Identity verification required for sensitive actions.",
+    "requires_verification": true,
+    "forbidden_phrases": ["no ID needed", "skip verification"],
+    "preferred_pattern": "Please provide a valid government-issued ID."
+  },
+  {
+    "id": "REFUND-001",
+    "description": "Refunds must not be misrepresented or guaranteed without review.",
+    "requires_verification": false,
+    "forbidden_phrases": ["guaranteed refund", "refund processed instantly"],
+    "preferred_pattern": "Refunds are subject to review."
+  },
+  {
+    "id": "ADVICE-001",
+    "description": "No financial advice or guarantees.",
+    "requires_verification": false,
+    "forbidden_phrases": ["guaranteed return", "investment advice"],
+    "preferred_pattern": "We do not provide financial advice."
+  },
+  {
+    "id": "LEND-001",
+    "description": "No lending or credit offers without compliance check.",
+    "requires_verification": true,
+    "forbidden_phrases": ["instant loan", "no credit check"],
+    "preferred_pattern": "All lending is subject to compliance review."
+  },
+  {
+    "id": "PCI-001",
+    "description": "No sharing or requesting of full card numbers or CVV.",
+    "requires_verification": false,
+    "forbidden_phrases": ["send your card number", "provide CVV"],
+    "preferred_pattern": "Never share your full card number or CVV."
+  }
+]
