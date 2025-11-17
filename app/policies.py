@@ -32,7 +32,8 @@ def detect_forbidden_phrases(text: str, policies: List[Dict[str, Any]]) -> List[
     found = []
     text_lower = text.lower()
     for p in policies:
-        for phrase in p.get('forbidden_phrases', []):
+        forbidden_list = p.get('forbidden_phrases') or []
+        for phrase in forbidden_list:
             if phrase and phrase.lower() in text_lower:
                 found.append(phrase)
     return found

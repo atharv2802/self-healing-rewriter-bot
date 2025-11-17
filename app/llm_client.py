@@ -1,19 +1,65 @@
 import os
 import logging
 import json
+import time
 from groq import Groq
-from typing import List
-from config import GROQ_API_KEY, GROQ_MODEL_NAME
+from typing import List, Any
+from config import GROQ_API_KEY, GROQ_MODEL_NAME, MAX_RETRIES, RETRY_DELAY
 
 client = Groq(api_key=GROQ_API_KEY)
 
+
+def _to_json(data: Any) -> str:
+    """Serialize data to compact JSON for prompt injection safety."""
+    try:
+        return json.dumps(data, ensure_ascii=False)
+    except TypeError:
+        return json.dumps(str(data), ensure_ascii=False)
+
+
+def _call_llm_with_retry(messages: List[dict], max_retries: int = MAX_RETRIES) -> str:
+    """Call LLM with automatic retry logic.
+    
+    Args:
+        messages: List of message dictionaries for the LLM
+        max_retries: Maximum number of retry attempts
+        
+    Returns:
+        LLM response content
+        
+    Raises:
+        Exception: If all retries fail
+    """
+    last_error = None
+    
+    for attempt in range(max_retries):
+        try:
+            response = client.chat.completions.create(
+                model=GROQ_MODEL_NAME,
+                messages=messages
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                wait_time = RETRY_DELAY * (2 ** attempt)  # Exponential backoff
+                logging.warning(f"LLM call failed (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {wait_time}s...")
+                time.sleep(wait_time)
+            else:
+                logging.error(f"LLM call failed after {max_retries} attempts: {e}")
+    
+    raise last_error
+
 def classify_message(context, draft_reply, policies):
+    context_json = _to_json(context)
+    draft_json = _to_json(draft_reply)
+    policies_block = policies if isinstance(policies, str) else _to_json(policies)
     prompt = f"""
 You are a compliance classifier. Analyze the draft reply against the policies below and return strict JSON.
 
-Context: {context}
-Draft Reply: {draft_reply}
-Policies: {policies}
+Context JSON: {context_json}
+Draft Reply JSON: {draft_json}
+Policies: {policies_block}
 
 CRITICAL RULES:
 1. If the draft reply ALREADY complies with all policies, set risk_level="low" and issues_detected=[].
@@ -63,11 +109,7 @@ Guidelines:
 STRICTLY output valid JSON only. No explanation or extra text.
 """
     try:
-        response = client.chat.completions.create(
-            model=GROQ_MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        content = response.choices[0].message.content
+        content = _call_llm_with_retry([{"role": "user", "content": prompt}])
         # Validate output
         try:
             parsed = json.loads(content)
@@ -98,13 +140,17 @@ STRICTLY output valid JSON only. No explanation or extra text.
         })
 
 def rewrite_message(context, draft_reply, policies, issues):
+    context_json = _to_json(context)
+    draft_json = _to_json(draft_reply)
+    issues_json = _to_json(issues)
+    policies_block = policies if isinstance(policies, str) else _to_json(policies)
     prompt = f"""
 Rewrite the draft reply to fix ONLY the specific violations listed below. Preserve the original intent and tone.
 
-Issues to fix: {issues}
-Draft Reply: {draft_reply}
-Policies: {policies}
-Context: {context}
+Issues JSON: {issues_json}
+Draft Reply JSON: {draft_json}
+Policies: {policies_block}
+Context JSON: {context_json}
 
 IMPORTANT REWRITE RULES:
 1. Fix ONLY the specific violations mentioned in the issues list.
@@ -122,11 +168,7 @@ SPECIFIC GUIDELINES:
 Return ONLY the rewritten reply text, nothing else.
 """
     try:
-        response = client.chat.completions.create(
-            model=GROQ_MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        rewritten = response.choices[0].message.content
+        rewritten = _call_llm_with_retry([{"role": "user", "content": prompt}])
         logging.info(f"Rewrite response: {rewritten}")
         return rewritten
     except Exception as e:
@@ -134,12 +176,17 @@ Return ONLY the rewritten reply text, nothing else.
         return "[Rewrite failed: LLM error]"
 
 def explain_changes(original, rewritten, policies, issues):
+        original_json = _to_json(original)
+        rewritten_json = _to_json(rewritten)
+        issues_json = _to_json(issues)
+        policies_block = policies if isinstance(policies, str) else _to_json(policies)
         prompt = f"""
-    Explain the changes made to the original reply to comply with the policies and resolve issues: {issues}.
+    Explain the changes made to the original reply to comply with the policies and resolve issues listed below.
 
-    Original: {original}
-    Rewritten: {rewritten}
-    Policies: {policies}
+    Issues JSON: {issues_json}
+    Original Reply JSON: {original_json}
+    Rewritten Reply JSON: {rewritten_json}
+    Policies: {policies_block}
 
     Limit your explanation to 30 words maximum. Be concise and clear.
     Also provide a before/after diff highlighting the key changes.
@@ -150,11 +197,7 @@ def explain_changes(original, rewritten, policies, issues):
     }}
     """
         try:
-            response = client.chat.completions.create(
-                model=GROQ_MODEL_NAME,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            result = response.choices[0].message.content
+            result = _call_llm_with_retry([{"role": "user", "content": prompt}])
             logging.info(f"Explanation response: {result}")
             return result
         except Exception as e:
