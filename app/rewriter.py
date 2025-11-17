@@ -25,19 +25,37 @@ def process_reply(request: RewriteRequest) -> RewriteResponse:
     classification_raw = classify_message(context, request.draft_reply, policies_str)
     classification_raw = clean_text(classification_raw)
     classification = json.loads(classification_raw)
-    
+
     risk_level = classification["risk_level"]
     confidence_score = classification.get("confidence_score", 50)
     issues_detected = classification["issues_detected"]
     violation_details_raw = classification.get("violation_details", [])
     can_auto_fix = classification["can_auto_fix"]
-    
+
     # Convert violation details to Pydantic models
     violation_details = [
         ViolationDetail(**v) for v in violation_details_raw
     ]
 
     logging.info(f"Processing reply: risk={risk_level}, confidence={confidence_score}, issues={issues_detected}, mode={SHR_MODE}")
+
+    # Escalate if forbidden phrases like 'fraud' are detected in draft_reply AND the reply is already flagged as high risk
+    # This prevents false escalations when agents legitimately discuss fraud protection, blocking cards, etc.
+    forbidden_keywords = ["fraud", "scam", "money laundering", "embezzle", "bribe"]
+    draft_text_lower = request.draft_reply.lower()
+    if any(word in draft_text_lower for word in forbidden_keywords) and risk_level == "high":
+        logging.warning("Escalation triggered by forbidden keyword in high-risk draft reply.")
+        return RewriteResponse(
+            risk_level="high",
+            confidence_score=100,
+            issues_detected=["Forbidden keyword detected: escalation required"],
+            violation_details=violation_details,
+            action="escalate",
+            safe_reply="",
+            explanation="Escalation required due to forbidden keyword in high-risk draft reply.",
+            before_after_diff=None,
+            escalate=True
+        )
 
     if SHR_MODE == "guardrail":
         if risk_level == "low" and not issues_detected:
