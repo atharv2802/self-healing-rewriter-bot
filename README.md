@@ -434,20 +434,22 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 ## Limitations & Future Roadmap
 
+
 ### Current Limitations
 - **No Authentication**: API is unauthenticated; add OAuth2/API keys for production
 - **Single LLM Provider**: Groq-only; no fallback to alternative providers
-- **No Metrics Endpoint**: Missing Prometheus-compatible metrics for observability
 - **No Policy Versioning**: Policies are runtime-loaded; no historical versioning or A/B testing
+- **No Multi-Tenant Isolation**: All requests share the same policy set; no per-organization separation
 
 ### Planned Enhancements
 - **Policy Versioning**: Track policy changes, rollback capabilities, and multi-version testing
-- **Metrics & Observability**: Prometheus endpoint for latency, throughput, error rates, and policy hit counts
 - **Multi-Tenant Support**: Isolated policy sets per organization or business unit
 - **Advanced Rule Reporting**: Detailed analytics on which policies trigger most frequently
 - **Multi-LLM Fallback**: Support for OpenAI, Anthropic, or local models as backup providers
 - **Streaming Responses**: Server-sent events for real-time rewrite feedback in agent UIs
 - **Pydantic V2 Migration**: Upgrade to latest Pydantic for improved performance and validation
+- **Authentication & API Security**: Add OAuth2 or API key support for production deployments
+- **Custom Metrics & Dashboards**: Expand Prometheus metrics to include business KPIs and custom compliance analytics
 
 ### Proposed Future Scope: ML Training & Reinforcement Learning
 
