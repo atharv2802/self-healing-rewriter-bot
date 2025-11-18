@@ -20,6 +20,10 @@ GROQ_MODEL_NAME: Optional[str] = os.getenv("GROQ_MODEL_NAME", "llama-3.3-70b-ver
 SHR_MODE: str = os.getenv("SHR_MODE", "suggestion")
 SHR_LOG_LEVEL: str = os.getenv("SHR_LOG_LEVEL", "info")
 
+# CORS configuration with support for local development and production
+DEFAULT_CORS_ORIGINS = ["http://localhost", "http://localhost:8000", "http://127.0.0.1", "http://127.0.0.1:8000"]
+CORS_ORIGINS: List[str] = _parse_list_env("CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
+
 # Forbidden keywords that trigger escalation when found in high-risk replies
 DEFAULT_FORBIDDEN = ["fraud", "scam", "money laundering", "embezzle", "bribe"]
 FORBIDDEN_KEYWORDS: List[str] = _parse_list_env("SHR_FORBIDDEN_KEYWORDS", DEFAULT_FORBIDDEN)

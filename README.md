@@ -114,6 +114,9 @@ This project showcases the engineering depth required to build **safe, compliant
 - **Offline Testability**: Pytest fixtures stub LLM calls for deterministic, credential-free CI/CD pipelines
 - **Production Logging**: Structured logs with correlation IDs, error traces, and compliance audit trails
 - **Environment-Driven Config**: Forbidden keywords, retry limits, and model parameters configurable via `.env`
+- **Prometheus Metrics**: Built-in `/metrics` endpoint for monitoring request latency, throughput, error rates, and HTTP status distributions
+- **CORS Protection**: Strict origin controls with environment-based configuration for local development and production deployments
+- **User-Friendly Error Messages**: Clear, actionable error responses with field-level validation details and suggestions for resolution
 
 ---
 
@@ -121,9 +124,10 @@ This project showcases the engineering depth required to build **safe, compliant
 
 | Endpoint | Method | Description | Response Codes |
 |----------|--------|-------------|----------------|
-| `/rewrite_reply` | POST | Process single draft reply for compliance rewriting | 200 (success), 400 (validation error), 500 (server error) |
+| `/rewrite_reply` | POST | Process single draft reply for compliance rewriting | 200 (success), 422 (validation error), 500 (server error) |
 | `/rewrite_batch` | POST | Process batch of up to 100 draft replies | 200 (all success), 207 (partial failure), 500 (all failed) |
 | `/health` | GET | Health check and version info | 200 |
+| `/metrics` | GET | Prometheus metrics for monitoring (request count, latency, errors) | 200 |
 
 ### Request Schema (`/rewrite_reply`)
 
@@ -268,12 +272,16 @@ All operational parameters externalized to `.env` and `config.py`:
 - `SHR_FORBIDDEN_KEYWORDS`: Comma-separated escalation triggers
 - `SHR_MAX_RETRIES`, `SHR_RETRY_DELAY`: Resilience tuning
 - `SHR_LOG_LEVEL`: Observability control
+- `CORS_ORIGINS`: Comma-separated list of allowed origins (default: localhost for development)
 
 ### Production-Friendly Operations
 - **Structured Logging**: JSON-formatted logs with severity, timestamps, and correlation IDs
 - **Error Handling**: Graceful degradation with fallback responses for LLM failures
 - **Batch Resilience**: Partial failures don't block entire batch; failed items return synthetic escalation responses
 - **Health Checks**: `/health` endpoint for liveness/readiness probes in orchestration platforms
+- **Prometheus Metrics**: `/metrics` endpoint exposes request count, latency histograms, error rates, and HTTP status code distributions for observability
+- **CORS Security**: Configurable cross-origin resource sharing with strict origin allowlists to prevent unauthorized API access
+- **Actionable Error Messages**: Validation errors return field-level details with suggestions (e.g., "Missing required field: agent_id. See /docs for schema.")
 
 ---
 
@@ -310,7 +318,75 @@ uvicorn app.main:app --reload
 ```
 
 API will be available at `http://localhost:8000`  
-Interactive docs: `http://localhost:8000/docs`
+Interactive docs: `http://localhost:8000/docs`  
+Metrics endpoint: `http://localhost:8000/metrics`
+
+---
+
+## Observability & Security Features
+
+### Prometheus Metrics
+
+The `/metrics` endpoint provides comprehensive monitoring data in Prometheus format:
+
+- **Request metrics**: Total request count, requests per second
+- **Latency histograms**: Response time distribution for all endpoints
+- **Error tracking**: HTTP status code counts (2xx, 4xx, 5xx)
+- **Policy hit rates**: Track which compliance policies trigger most frequently (via custom labels)
+
+**Example metrics output**:
+```
+http_requests_total{method="POST",path="/rewrite_reply",status="200"} 1247
+http_request_duration_seconds_bucket{le="0.5",path="/rewrite_reply"} 1200
+http_request_duration_seconds_sum{path="/rewrite_reply"} 245.3
+```
+
+Integrate with Prometheus/Grafana for real-time dashboards and alerting.
+
+### CORS Configuration
+
+Cross-Origin Resource Sharing (CORS) is enabled with strict origin controls to prevent unauthorized access:
+
+**Default behavior** (local development):
+- Allows: `http://localhost`, `http://localhost:8000`, `http://127.0.0.1`, `http://127.0.0.1:8000`
+- Credentials: Enabled for authenticated requests
+- Methods: `GET`, `POST` only
+
+**Production configuration**:
+Set the `CORS_ORIGINS` environment variable with your trusted domains:
+
+```bash
+# .env file
+CORS_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+```
+
+This prevents malicious websites from calling your API from browsers while allowing your own frontend applications.
+
+### Improved Error Messages
+
+All validation and server errors return structured, actionable responses:
+
+**Validation error example** (HTTP 422):
+```json
+{
+  "error": "Validation Error",
+  "message": "The request contains invalid or missing fields.",
+  "details": [
+    "body -> agent_id: field required",
+    "body -> draft_reply: field required"
+  ],
+  "suggestion": "Please check the API documentation at /docs for the correct request format."
+}
+```
+
+**Server error example** (HTTP 500):
+```json
+{
+  "error": "Internal Server Error",
+  "message": "An unexpected error occurred while processing your request.",
+  "suggestion": "Please try again. If the problem persists, contact support with the timestamp of this error."
+}
+```
 
 ---
 

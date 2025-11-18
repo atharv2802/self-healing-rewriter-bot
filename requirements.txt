@@ -6,3 +6,4 @@ groq
 httpx
 typing-extensions
 pytest
+prometheus-fastapi-instrumentator
