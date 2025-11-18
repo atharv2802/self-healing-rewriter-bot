@@ -10,9 +10,9 @@ A production-ready, stateless FastAPI microservice for real-time compliance and 
 
 ---
 
-## Why This Project Is Relevant to Rulebase
+## Why This Project Is Relevant to FinTech - Compliance
 
-This microservice demonstrates **real-time AI rewriting and compliance workflows** directly aligned with Rulebase's agent-intelligence and QA platform capabilities:
+This microservice demonstrates **real-time AI rewriting and compliance workflows** directly aligned with many fintech's agent-intelligence and QA platform capabilities:
 
 - **Guardrails & Safe Rewrites**: Automatically detects and corrects policy violations (KYC, refund guarantees, tax advice, PCI compliance) without halting agent workflows.
 - **Escalation Logic**: Distinguishes between auto-fixable issues and critical risks requiring human review (fraud, sanctions, factual insurance claims).
@@ -20,7 +20,7 @@ This microservice demonstrates **real-time AI rewriting and compliance workflows
 - **Real-Time Processing**: Stateless, low-latency API design supports high-throughput agent assistance platforms.
 - **Deterministic & Testable**: JSON-serialized prompts, offline test fixtures, and strict schema validation ensure reliability in production environments.
 
-This project showcases the engineering depth required to build **safe, compliant, and observable AI systems** at scale—core competencies for an AI Engineer role at Rulebase.
+This project showcases the engineering depth required to build **safe, compliant, and observable AI systems** at scale—core competencies for an AI Engineer role at FinTech.
 
 ---
 
